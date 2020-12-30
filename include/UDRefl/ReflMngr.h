@@ -218,11 +218,13 @@ namespace Ubpa::UDRefl {
 		template<typename T>
 		void RegisterType();
 
-		// RegisterType<T>
-		// AddConstructor<T>
-		// AddDestructor<T>
+		// RegisterType(type_name<T>(), sizeof(T), alignof(T))
+		// AddConstructor<T>()
+		// AddConstructor<T, const T&>()
+		// AddConstructor<T, T&&>()
+		// AddDestructor<T>()
 		template<typename T>
-		void RegisterTypeAuto(AttrSet attrs_ctor = {}, AttrSet attrs_dtor = {});
+		void RegisterTypeAuto();
 
 		// get TypeID from field_data
 		// field_data can be
@@ -297,25 +299,25 @@ namespace Ubpa::UDRefl {
 		// Cast
 		/////////
 
-		ObjectPtr StaticCast_DerivedToBase (ObjectPtr obj, TypeID typeID) const noexcept;
-		ObjectPtr StaticCast_BaseToDerived (ObjectPtr obj, TypeID typeID) const noexcept;
-		ObjectPtr DynamicCast_BaseToDerived(ObjectPtr obj, TypeID typeID) const noexcept;
-		ObjectPtr StaticCast               (ObjectPtr obj, TypeID typeID) const noexcept;
-		ObjectPtr DynamicCast              (ObjectPtr obj, TypeID typeID) const noexcept;
+		ObjectPtr StaticCast_DerivedToBase (ObjectPtr obj, TypeID typeID) const;
+		ObjectPtr StaticCast_BaseToDerived (ObjectPtr obj, TypeID typeID) const;
+		ObjectPtr DynamicCast_BaseToDerived(ObjectPtr obj, TypeID typeID) const;
+		ObjectPtr StaticCast               (ObjectPtr obj, TypeID typeID) const;
+		ObjectPtr DynamicCast              (ObjectPtr obj, TypeID typeID) const;
 		
-		ConstObjectPtr StaticCast_DerivedToBase (ConstObjectPtr obj, TypeID typeID) const noexcept
+		ConstObjectPtr StaticCast_DerivedToBase (ConstObjectPtr obj, TypeID typeID) const
 		{ return StaticCast_DerivedToBase (reinterpret_cast<ObjectPtr&>(obj), typeID); }
 
-		ConstObjectPtr StaticCast_BaseToDerived (ConstObjectPtr obj, TypeID typeID) const noexcept
+		ConstObjectPtr StaticCast_BaseToDerived (ConstObjectPtr obj, TypeID typeID) const
 		{ return StaticCast_BaseToDerived (reinterpret_cast<ObjectPtr&>(obj), typeID); }
 
-		ConstObjectPtr DynamicCast_BaseToDerived(ConstObjectPtr obj, TypeID typeID) const noexcept
+		ConstObjectPtr DynamicCast_BaseToDerived(ConstObjectPtr obj, TypeID typeID) const
 		{ return DynamicCast_BaseToDerived(reinterpret_cast<ObjectPtr&>(obj), typeID); }
 
-		ConstObjectPtr StaticCast               (ConstObjectPtr obj, TypeID typeID) const noexcept
+		ConstObjectPtr StaticCast               (ConstObjectPtr obj, TypeID typeID) const
 		{ return StaticCast               (reinterpret_cast<ObjectPtr&>(obj), typeID); }
 
-		ConstObjectPtr DynamicCast              (ConstObjectPtr obj, TypeID typeID) const noexcept
+		ConstObjectPtr DynamicCast              (ConstObjectPtr obj, TypeID typeID) const
 		{ return DynamicCast              (reinterpret_cast<ObjectPtr&>(obj), typeID); }
 
 		//
@@ -323,25 +325,28 @@ namespace Ubpa::UDRefl {
 		//////////
 
 		// variable object
-		ObjectPtr      RWVar(TypeID      typeID, StrID fieldID) noexcept;
+		ObjectPtr      RWVar(TypeID      typeID, StrID fieldID);
 		// object
-		ConstObjectPtr RVar (TypeID      typeID, StrID fieldID) const noexcept;
+		ConstObjectPtr RVar (TypeID      typeID, StrID fieldID) const;
 		// variable
-		ObjectPtr      RWVar(ObjectPtr      obj, StrID fieldID) noexcept;
+		ObjectPtr      RWVar(ObjectPtr      obj, StrID fieldID);
 		// all
-		ConstObjectPtr RVar (ConstObjectPtr obj, StrID fieldID) const noexcept;
+		ConstObjectPtr RVar (ConstObjectPtr obj, StrID fieldID) const;
 		// variable, for diamond inheritance
-		ObjectPtr      RWVar(ObjectPtr      obj, TypeID baseID, StrID fieldID) noexcept;
+		ObjectPtr      RWVar(ObjectPtr      obj, TypeID baseID, StrID fieldID);
 		// all, for diamond inheritance
-		ConstObjectPtr RVar (ConstObjectPtr obj, TypeID baseID, StrID fieldID) const noexcept;
+		ConstObjectPtr RVar (ConstObjectPtr obj, TypeID baseID, StrID fieldID) const;
 
 		//
 		// Invoke
 		///////////
+		//
+		// - you should provide T, Args... explicitly (without any template argument deduction)
+		// 
 
-		InvocableResult IsStaticInvocable(TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const noexcept;
-		InvocableResult IsConstInvocable (TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const noexcept;
-		InvocableResult IsInvocable      (TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const noexcept;
+		InvocableResult IsStaticInvocable(TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const;
+		InvocableResult IsConstInvocable (TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const;
+		InvocableResult IsInvocable      (TypeID typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}) const;
 
 		InvokeResult Invoke(
 			TypeID typeID,
@@ -367,11 +372,11 @@ namespace Ubpa::UDRefl {
 		// -- template --
 
 		template<typename... Args>
-		InvocableResult IsStaticInvocable(TypeID typeID, StrID methodID) const noexcept;
+		InvocableResult IsStaticInvocable(TypeID typeID, StrID methodID) const;
 		template<typename... Args>
-		InvocableResult IsConstInvocable (TypeID typeID, StrID methodID) const noexcept;
+		InvocableResult IsConstInvocable (TypeID typeID, StrID methodID) const;
 		template<typename... Args>
-		InvocableResult IsInvocable      (TypeID typeID, StrID methodID) const noexcept;
+		InvocableResult IsInvocable      (TypeID typeID, StrID methodID) const;
 
 		template<typename T>
 		T InvokeRet(TypeID      typeID, StrID methodID, Span<const TypeID> argTypeIDs = {}, void* args_buffer = nullptr) const;
@@ -398,8 +403,8 @@ namespace Ubpa::UDRefl {
 		// Meta
 		/////////
 
-		bool IsConstructible(TypeID typeID, Span<const TypeID> argTypeIDs = {}) const noexcept;
-		bool IsDestructible (TypeID typeID) const noexcept;
+		bool IsConstructible(TypeID typeID, Span<const TypeID> argTypeIDs = {}) const;
+		bool IsDestructible (TypeID typeID) const;
 
 		bool Construct(ObjectPtr      obj, Span<const TypeID> argTypeIDs = {}, void* args_buffer = nullptr) const;
 		bool Destruct (ConstObjectPtr obj) const;
@@ -418,7 +423,7 @@ namespace Ubpa::UDRefl {
 		// -- template --
 
 		template<typename... Args>
-		bool IsConstructible(TypeID typeID) const noexcept;
+		bool IsConstructible(TypeID typeID) const;
 
 		template<typename... Args>
 		bool Construct(ObjectPtr obj, Args... args) const;
@@ -429,8 +434,8 @@ namespace Ubpa::UDRefl {
 		template<typename... Args>
 		SharedObject MakeShared(TypeID typeID, Args... args) const;
 
-		// if T is not register, call RegisterTypeAuto
-		// else add ctor
+		// - if T is not register, call RegisterTypeAuto<T>()
+		// - call AddConstructor<T, Args...>()
 		template<typename T, typename... Args>
 		ObjectPtr NewAuto(Args... args);
 
@@ -517,6 +522,10 @@ namespace Ubpa::UDRefl {
 		//
 		// Memory
 		///////////
+		//
+		// - MInvoke will allocate buffer for result, and move to SharedObject
+		// - if result is reference, SharedObject's Ptr is a pointer of referenced object
+		// 
 
 		SharedObject MInvoke(
 			TypeID typeID,
@@ -584,8 +593,13 @@ namespace Ubpa::UDRefl {
 
 		DereferenceProperty GetDereferenceProperty(TypeID ID) const;
 		TypeID Dereference(TypeID ID) const;
-		ObjectPtr Dereference(ConstObjectPtr pointer_obj) const;
-		ConstObjectPtr DereferenceAsConst(ConstObjectPtr pointer_obj) const;
+		// require: DereferenceProperty(ref_obj.GetID()) == DereferenceProperty::Variable
+		ObjectPtr Dereference(ConstObjectPtr ref_obj) const;
+		// require: DereferenceProperty(ref_obj.GetID()) != DereferenceProperty::NotReference
+		ConstObjectPtr DereferenceAsConst(ConstObjectPtr ref_obj) const;
+
+		TypeID AddConstLValueReference(TypeID ID);
+		ConstObjectPtr AddConstLValueReference(ConstObjectPtr obj);
 
 	private:
 		ReflMngr();

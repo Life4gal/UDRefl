@@ -29,27 +29,11 @@ int main() {
 	ReflMngr::Instance().AddField<&Vec::y>("y");
 	ReflMngr::Instance().AddMethod<&Vec::norm>("norm");
 	ReflMngr::Instance().AddMethod<&Vec::copy>("copy");
-	ReflMngr::Instance().AddMethod<&Vec::operator+>(StrIDRegistry::Meta::operator_add);
 
-	// [ or ]
-	// ObjectPtr v = ReflMngr::Instance().New(TypeID_of<Vec>);
-	// // do something
-	// ReflMngr::Instance().Delete(v);
 	SharedObject v = ReflMngr::Instance().MakeShared(TypeID_of<Vec>);
 
-	v->RWVar(StrID{ "x" }).As<float>() = 3.f;
-	v->RWVar(StrID{ "y" }).As<float>() = 4.f;
-
-	std::cout << "x: " << v->RVar(StrID{ "x" }).As<float>() << std::endl;
-	std::cout << "norm: " << v->Invoke<float>(StrID{ "norm" }) << std::endl;
-	
-	ReflMngr::Instance().ForEachField(
-		TypeID_of<Vec>,
-		[](TypeRef type, FieldRef field) {
-			std::cout << ReflMngr::Instance().nregistry.Nameof(field.ID) << std::endl;
-			return true;
-		}
-	);
+	v->RWVar(StrID{ "x" }) = 3.f;
+	v->RWVar(StrID{ "y" }) = 4.f;
 
 	ReflMngr::Instance().ForEachMethod(
 		TypeID_of<Vec>,
@@ -69,15 +53,20 @@ int main() {
 		}
 	);
 
-	auto w = v->DMInvoke<const Vec&>(StrIDRegistry::MetaID::operator_add, v.As<Vec>());
+	auto w0 = v->MInvoke(StrIDRegistry::MetaID::operator_add, std::pmr::get_default_resource(), v.As<Vec>());
+	auto w1 = v->DMInvoke(StrIDRegistry::MetaID::operator_add, v.As<Vec>());
+	auto w2 = v->ADMInvoke(StrIDRegistry::MetaID::operator_add, v);
 
-	w->ForEachRVar(
-		[](TypeRef type, FieldRef field, ConstObjectPtr var) {
-			std::cout
-				<< ReflMngr::Instance().nregistry.Nameof(field.ID)
-				<< ": " << var
-				<< std::endl;
-			return true;
-		}
-	);
+	std::array arr_w = { w0,w1,w2 };
+	for (auto w : arr_w) {
+		w->ForEachRVar(
+			[](TypeRef type, FieldRef field, ConstObjectPtr var) {
+				std::cout
+					<< ReflMngr::Instance().nregistry.Nameof(field.ID)
+					<< ": " << var
+					<< std::endl;
+				return true;
+			}
+		);
+	}
 }

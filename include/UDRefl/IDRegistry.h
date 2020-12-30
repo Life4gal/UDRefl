@@ -13,18 +13,22 @@
 namespace Ubpa::UDRefl {
 	template<typename T>
 	class IDRegistry {
-	protected:
-		void RegisterUnmanaged(T ID, std::string_view name);
-		void Register(T ID, std::string_view name);
-
 	public:
 		IDRegistry();
 
-		bool IsRegistered(T ID) const noexcept;
-		std::string_view Nameof(T ID) const noexcept;
+		void RegisterUnmanaged(T ID, std::string_view name);
+		T RegisterUnmanaged(std::string_view name);
+		void Register(T ID, std::string_view name);
+		T Register(std::string_view name);
 
-		void UnregisterUnmanaged(T ID) noexcept;
+		bool IsRegistered(T ID) const;
+		std::string_view Nameof(T ID) const;
+
+		void UnregisterUnmanaged(T ID);
 		void Clear() noexcept;
+
+	protected:
+		std::pmr::polymorphic_allocator<char> get_allocator() { return &resource; }
 
 	private:
 		std::pmr::monotonic_buffer_resource resource;
@@ -32,7 +36,7 @@ namespace Ubpa::UDRefl {
 
 #ifndef NDEBUG
 	public:
-		bool IsUnmanaged(T ID) const noexcept;
+		bool IsUnmanaged(T ID) const;
 		void ClearUnmanaged() noexcept;
 	private:
 		std::pmr::unordered_set<T> unmanagedIDs;
@@ -284,14 +288,7 @@ namespace Ubpa::UDRefl {
 			static constexpr StrID container_get_allocator = Meta::container_get_allocator;
 		};
 
-		using IDRegistry<StrID>::RegisterUnmanaged;
-		using IDRegistry<StrID>::Register;
-		using IDRegistry<StrID>::IsRegistered;
-
 		StrIDRegistry();
-
-		StrID RegisterUnmanaged(std::string_view name) { StrID ID{ name }; IDRegistry<StrID>::RegisterUnmanaged(ID, name); return ID; }
-		StrID Register(std::string_view name) { StrID ID{ name }; IDRegistry<StrID>::Register(ID, name); return ID; }
 	};
 
 	class TypeIDRegistry : public IDRegistry<TypeID> {
@@ -305,24 +302,22 @@ namespace Ubpa::UDRefl {
 			static constexpr TypeID t_void = Meta::t_void;
 		};
 
-		using IDRegistry<TypeID>::RegisterUnmanaged;
-		using IDRegistry<TypeID>::Register;
-		using IDRegistry<TypeID>::IsRegistered;
-
 		TypeIDRegistry() {
 			RegisterUnmanaged(Meta::global);
 			RegisterUnmanaged(Meta::t_void);
 		}
 
-		TypeID RegisterUnmanaged(std::string_view name) { TypeID ID{ name }; IDRegistry<TypeID>::RegisterUnmanaged(ID, name); return ID; }
-		TypeID Register(std::string_view name) { TypeID ID{ name }; IDRegistry<TypeID>::Register(ID, name); return ID; }
+		using IDRegistry<TypeID>::Register;
+		using IDRegistry<TypeID>::IsRegistered;
 
 		// unmanaged
 		template<typename T>
 		void Register() { IDRegistry<TypeID>::RegisterUnmanaged(TypeID_of<T>, type_name<T>()); }
 
 		template<typename T>
-		bool IsRegistered() const noexcept { return IDRegistry<TypeID>::IsRegistered(TypeID_of<T>); }
+		bool IsRegistered() const { return IDRegistry<TypeID>::IsRegistered(TypeID_of<T>); }
+
+		TypeID RegisterAddConstLValueReference(TypeID ID);
 	};
 }
 

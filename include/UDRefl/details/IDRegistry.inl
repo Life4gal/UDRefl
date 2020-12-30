@@ -19,13 +19,19 @@ namespace Ubpa::UDRefl {
 			assert(target->second == name);
 			return;
 		}
-		else
-			target = id2name.emplace_hint(target, ID, name);
-		target->second = name;
+
+		id2name.emplace_hint(target, ID, name);
 
 #ifndef NDEBUG
 		unmanagedIDs.insert(ID);
 #endif // !NDEBUG
+	}
+
+	template<typename T>
+	T IDRegistry<T>::RegisterUnmanaged(std::string_view name) {
+		T ID{ name };
+		RegisterUnmanaged(ID, name);
+		return ID;
 	}
 
 	template<typename T>
@@ -54,14 +60,21 @@ namespace Ubpa::UDRefl {
 	}
 
 	template<typename T>
-	void IDRegistry<T>::UnregisterUnmanaged(T ID) noexcept {
+	T IDRegistry<T>::Register(std::string_view name) {
+		T ID{ name };
+		Register(ID, name);
+		return ID;
+	}
+
+	template<typename T>
+	void IDRegistry<T>::UnregisterUnmanaged(T ID) {
 		auto target = id2name.find(ID);
 		if (target == id2name.end())
 			return;
 
 		assert(IsUnmanaged(ID));
 
-		id2name.erase(ID);
+		id2name.erase(target);
 	}
 
 	template<typename T>
@@ -75,7 +88,7 @@ namespace Ubpa::UDRefl {
 
 #ifndef NDEBUG
 	template<typename T>
-	bool IDRegistry<T>::IsUnmanaged(T ID) const noexcept {
+	bool IDRegistry<T>::IsUnmanaged(T ID) const {
 		return unmanagedIDs.find(ID) != unmanagedIDs.end();
 	}
 
@@ -89,12 +102,12 @@ namespace Ubpa::UDRefl {
 
 
 	template<typename T>
-	bool IDRegistry<T>::IsRegistered(T ID) const noexcept {
+	bool IDRegistry<T>::IsRegistered(T ID) const {
 		return id2name.find(ID) != id2name.end();
 	}
 
 	template<typename T>
-	std::string_view IDRegistry<T>::Nameof(T ID) const noexcept {
+	std::string_view IDRegistry<T>::Nameof(T ID) const {
 		auto target = id2name.find(ID);
 		if (target != id2name.end())
 			return target->second;
