@@ -9,36 +9,44 @@
 
 #define OBJECT_PTR_DECLARE_OPERATOR(op, name) \
 template<typename Arg>                        \
-SharedObject operator op (Arg rhs) const
+SharedObject operator op (Arg&& rhs) const
 
-#define OBJECT_PTR_DEFINE_CMP_OPERATOR(op, name)                                                              \
-template<typename Arg>                                                                                        \
-bool operator op (Arg rhs) const {                                                                            \
-    return static_cast<bool>(ADMInvoke<Arg>(StrIDRegistry::MetaID::operator_##name, std::forward<Arg>(rhs))); \
+#define OBJECT_PTR_DEFINE_CMP_OPERATOR(op, name)                                                         \
+template<typename Arg>                                                                                   \
+bool operator op (Arg&& rhs) const {                                                                     \
+    return static_cast<bool>(ADMInvoke(StrIDRegistry::MetaID::operator_##name, std::forward<Arg>(rhs))); \
+}
+
+#define OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(op, name)                             \
+template<typename Arg>                                                             \
+ObjectPtr operator op (Arg&& rhs) const {                                          \
+	AInvoke<void>(StrIDRegistry::MetaID::operator_##name, std::forward<Arg>(rhs)); \
+	return *this;                                                                  \
 }
 
 #define OBJECT_PTR_DECLARE_CONTAINER(name) \
 template<typename Arg>                     \
-SharedObject name (Arg rhs) const
+SharedObject name (Arg&& rhs) const
 
 #define OBJECT_PTR_DECLARE_CONTAINER_VARS(name) \
 template<typename... Args>                      \
-SharedObject name (Args... args) const
+SharedObject name (Args&&... args) const
 
-#define SHARED_OBJECT_DECLARE_OPERATOR(op)                           \
-template<typename Arg>                                               \
-SharedObject operator op (Arg rhs) const
+#define SHARED_OBJECT_DECLARE_OPERATOR(op) \
+template<typename Arg>                     \
+SharedObject operator op (Arg&& rhs) const
 
-#define SHARED_OBJECT_DEFINE_OPERATOR(op)                            \
-template<typename Arg>                                               \
-SharedObject operator op (Arg rhs) const {                           \
-    return AsObjectPtr()->operator op <Arg>(std::forward<Arg>(rhs)); \
+#define SHARED_OBJECT_DEFINE_OPERATOR(op)                \
+template<typename Arg>                                   \
+SharedObject operator op (Arg&& rhs) const {             \
+    AsObjectPtr()->operator op (std::forward<Arg>(rhs)); \
+    return *this;                                        \
 }
 
-#define SHARED_OBJECT_DEFINE_CMP_OPERATOR(op)                        \
-template<typename Arg>                                               \
-bool operator op (Arg rhs) const {                                   \
-    return AsObjectPtr()->operator op <Arg>(std::forward<Arg>(rhs)); \
+#define SHARED_OBJECT_DEFINE_CMP_OPERATOR(op)                   \
+template<typename Arg>                                          \
+bool operator op (Arg&& rhs) const {                            \
+    return AsObjectPtr()->operator op (std::forward<Arg>(rhs)); \
 }
 
 #define SHARED_OBJECT_DEFINE_UNARY_OPERATOR(op) \
@@ -89,49 +97,49 @@ namespace Ubpa::UDRefl {
 			StrID methodID,
 			void* result_buffer = nullptr,
 			Span<const TypeID> argTypeIDs = {},
-			void* args_buffer = nullptr) const;
+			ArgsBuffer args_buffer = nullptr) const;
 
 		template<typename... Args>
 		InvocableResult IsInvocable(StrID methodID) const;
 
 		template<typename T>
-		T InvokeRet(StrID methodID, Span<const TypeID> argTypeIDs = {}, void* args_buffer = nullptr) const;
+		T InvokeRet(StrID methodID, Span<const TypeID> argTypeIDs = {}, ArgsBuffer args_buffer = nullptr) const;
 
 		template<typename... Args>
-		InvokeResult InvokeArgs(StrID methodID, void* result_buffer, Args... args) const;
+		InvokeResult InvokeArgs(StrID methodID, void* result_buffer, Args&&... args) const;
 
 		template<typename T, typename... Args>
-		T Invoke(StrID methodID, Args... args) const;
+		T Invoke(StrID methodID, Args&&... args) const;
 
 		SharedObject MInvoke(
 			StrID methodID,
 			Span<const TypeID> argTypeIDs = {},
-			void* args_buffer = nullptr,
+			ArgsBuffer args_buffer = nullptr,
 			std::pmr::memory_resource* rst_rsrc = std::pmr::get_default_resource()) const;
 
 		template<typename... Args>
 		SharedObject MInvoke(
 			StrID methodID,
 			std::pmr::memory_resource* rst_rsrc,
-			Args... args) const;
+			Args&&... args) const;
 
 		template<typename... Args>
 		SharedObject DMInvoke(
 			StrID methodID,
-			Args... args) const;
+			Args&&... args) const;
 
-		// A means auto, ObjectPtr/SharedObject will be transform as ID + ptr
+		// 'A' means auto, ObjectPtr/SharedObject will be transformed as ID + ptr
 		template<typename... Args>
 		SharedObject AMInvoke(
 			StrID methodID,
 			std::pmr::memory_resource* rst_rsrc,
-			Args... args) const;
+			Args&&... args) const;
 
-		// A means auto, ObjectPtr/SharedObject will be transform as ID + ptr
+		// 'A' means auto, ObjectPtr/SharedObject will be transformed as ID + ptr
 		template<typename... Args>
 		SharedObject ADMInvoke(
 			StrID methodID,
-			Args... args) const;
+			Args&&... args) const;
 
 		//
 		// Fields
@@ -146,6 +154,9 @@ namespace Ubpa::UDRefl {
 		// self [r] vars and all bases' [r] vars
 		void ForEachRVar(const std::function<bool(TypeRef, FieldRef, ConstObjectPtr)>& func) const;
 
+		// self [r] owned vars and all bases' [r] owned vars
+		void ForEachROwnedVar(const std::function<bool(TypeRef, FieldRef, ConstObjectPtr)>& func) const;
+
 		//
 		// Algorithm
 		//////////////
@@ -158,12 +169,15 @@ namespace Ubpa::UDRefl {
 		std::vector<MethodRef>                                     GetMethods();
 		std::vector<std::tuple<TypeRef, FieldRef, ConstObjectPtr>> GetTypeFieldRVars();
 		std::vector<ConstObjectPtr>                                GetRVars();
+		std::vector<std::tuple<TypeRef, FieldRef, ConstObjectPtr>> GetTypeFieldROwnedVars();
+		std::vector<ConstObjectPtr>                                GetROwnedVars();
 
-		std::optional<TypeID   > FindTypeID(const std::function<bool(TypeID        )>& func) const;
-		std::optional<TypeRef  > FindType  (const std::function<bool(TypeRef       )>& func) const;
-		std::optional<FieldRef > FindField (const std::function<bool(FieldRef      )>& func) const;
-		std::optional<MethodRef> FindMethod(const std::function<bool(MethodRef     )>& func) const;
-		ConstObjectPtr           FindRVar  (const std::function<bool(ConstObjectPtr)>& func) const;
+		std::optional<TypeID   > FindTypeID   (const std::function<bool(TypeID        )>& func) const;
+		std::optional<TypeRef  > FindType     (const std::function<bool(TypeRef       )>& func) const;
+		std::optional<FieldRef > FindField    (const std::function<bool(FieldRef      )>& func) const;
+		std::optional<MethodRef> FindMethod   (const std::function<bool(MethodRef     )>& func) const;
+		ConstObjectPtr           FindRVar     (const std::function<bool(ConstObjectPtr)>& func) const;
+		ConstObjectPtr           FindROwnedVar(const std::function<bool(ConstObjectPtr)>& func) const;
 
 		DereferenceProperty GetDereferenceProperty() const;
 		TypeID              DereferenceID() const;
@@ -197,7 +211,7 @@ namespace Ubpa::UDRefl {
 
 		template<typename T>
 		T& operator>>(T& out) const {
-			ADMInvoke<T&>(StrIDRegistry::MetaID::operator_rshift, out);
+			ADMInvoke(StrIDRegistry::MetaID::operator_rshift, out);
 			return out;
 		}
 
@@ -304,7 +318,7 @@ namespace Ubpa::UDRefl {
 		SharedObject operator*() const;
 
 		template<typename... Args>
-		SharedObject operator()(Args... args) const;
+		SharedObject operator()(Args&&... args) const;
 
 		//
 		// container
@@ -373,75 +387,89 @@ namespace Ubpa::UDRefl {
 			StrID methodID,
 			void* result_buffer = nullptr,
 			Span<const TypeID> argTypeIDs = {},
-			void* args_buffer = nullptr) const;
+			ArgsBuffer args_buffer = nullptr) const;
 
 		SharedObject MInvoke(
 			StrID methodID,
 			Span<const TypeID> argTypeIDs = {},
-			void* args_buffer = nullptr,
+			ArgsBuffer args_buffer = nullptr,
 			std::pmr::memory_resource* rst_rsrc = std::pmr::get_default_resource()) const;
 
 		template<typename... Args>
 		InvocableResult IsInvocable(StrID methodID) const;
 
 		template<typename T>
-		T InvokeRet(StrID methodID, Span<const TypeID> argTypeIDs = {}, void* args_buffer = nullptr) const;
+		T InvokeRet(StrID methodID, Span<const TypeID> argTypeIDs = {}, ArgsBuffer args_buffer = nullptr) const;
 
 		template<typename... Args>
-		InvokeResult InvokeArgs(StrID methodID, void* result_buffer, Args... args) const;
+		InvokeResult InvokeArgs(StrID methodID, void* result_buffer, Args&&... args) const;
 
 		template<typename T, typename... Args>
-		T Invoke(StrID methodID, Args... args) const;
+		T Invoke(StrID methodID, Args&&... args) const;
 
 		template<typename... Args>
 		SharedObject MInvoke(
 			StrID methodID,
 			std::pmr::memory_resource* rst_rsrc,
-			Args... args) const;
+			Args&&... args) const;
 
 		template<typename... Args>
 		SharedObject DMInvoke(
 			StrID methodID,
-			Args... args) const;
+			Args&&... args) const;
+
+		// A means auto, ObjectPtr/SharedObject will be transform as ID + ptr
+		template<typename T, typename... Args>
+		T AInvoke(StrID methodID, Args&&... args) const;
 
 		// A means auto, ObjectPtr/SharedObject will be transform as ID + ptr
 		template<typename... Args>
 		SharedObject AMInvoke(
 			StrID methodID,
 			std::pmr::memory_resource* rst_rsrc,
-			Args... args) const;
+			Args&&... args) const;
 
 		// A means auto, ObjectPtr/SharedObject will be transform as ID + ptr
 		template<typename... Args>
 		SharedObject ADMInvoke(
 			StrID methodID,
-			Args... args) const;
+			Args&&... args) const;
 
 		// self [r/w] vars and all bases' [r/w] vars
 		void ForEachRWVar(const std::function<bool(TypeRef, FieldRef, ObjectPtr)>& func) const;
 
+		// self [r/w] owned vars and all bases' [r/w] owned vars
+		// if obj is &{const{T}}, then return directly
+		void ForEachRWOwnedVar(const std::function<bool(TypeRef, FieldRef, ObjectPtr)>& func) const;
+
 		std::vector<std::tuple<TypeRef, FieldRef, ObjectPtr>> GetTypeFieldRWVars();
 		std::vector<ObjectPtr>                                GetRWVars();
+		std::vector<std::tuple<TypeRef, FieldRef, ObjectPtr>> GetTypeFieldRWOwnedVars();
+		std::vector<ObjectPtr>                                GetRWOwnedVars();
 
-		ObjectPtr FindRWVar(const std::function<bool(ObjectPtr)>& func) const;
+		ObjectPtr FindRWVar     (const std::function<bool(ObjectPtr)>& func) const;
+		ObjectPtr FindRWOwnedVar(const std::function<bool(ObjectPtr)>& func) const;
 
 		//
 		// Meta
 		/////////
 
 		using ObjectPtrBase::operator*;
-		
-		OBJECT_PTR_DECLARE_OPERATOR(=, assign);
-		OBJECT_PTR_DECLARE_OPERATOR(+=, assign_add);
-		OBJECT_PTR_DECLARE_OPERATOR(-=, assign_sub);
-		OBJECT_PTR_DECLARE_OPERATOR(*=, assign_mul);
-		OBJECT_PTR_DECLARE_OPERATOR(/=, assign_div);
-		OBJECT_PTR_DECLARE_OPERATOR(%=, assign_mod);
-		OBJECT_PTR_DECLARE_OPERATOR(&=, assign_band);
-		OBJECT_PTR_DECLARE_OPERATOR(|=, assign_bor);
-		OBJECT_PTR_DECLARE_OPERATOR(^=, assign_bxor);
-		OBJECT_PTR_DECLARE_OPERATOR(<<=, assign_lshift);
-		OBJECT_PTR_DECLARE_OPERATOR(>>=, assign_rshift);
+
+		template<typename Arg,
+			std::enable_if_t<!std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg>>, ObjectPtr>, int> = 0>
+		SharedObject operator=(Arg&& rhs) const;
+
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(+=, assign_add);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(-=, assign_sub);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(*=, assign_mul);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(/=, assign_div);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(%=, assign_mod);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(&=, assign_band);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(|=, assign_bor);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(^=, assign_bxor);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(<<=, assign_lshift);
+		OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR(>>=, assign_rshift);
 
 		OBJECT_PTR_DECLARE_OPERATOR([], subscript);
 		OBJECT_PTR_DECLARE_OPERATOR(->*, member_of_pointer);
@@ -454,7 +482,7 @@ namespace Ubpa::UDRefl {
 		SharedObject operator*() const;
 
 		template<typename... Args>
-		SharedObject operator()(Args... args) const;
+		SharedObject operator()(Args&&... args) const;
 
 		template<typename T>
 		SharedObject operator<<(T&& in) const;
@@ -693,7 +721,7 @@ namespace Ubpa::UDRefl {
 		SharedObject operator*() const;
 
 		template<typename... Args>
-		SharedObject operator()(Args... args) const;
+		SharedObject operator()(Args&&... args) const;
 	};
 
 	// SharedBuffer + ID
@@ -756,7 +784,12 @@ namespace Ubpa::UDRefl {
 
 		using SharedObjectBase::operator*;
 		
-		SHARED_OBJECT_DEFINE_OPERATOR(=)
+		template<typename Arg,
+			std::enable_if_t<!std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg>>, ObjectPtr>, int> = 0 >
+		SharedObject operator=(Arg&& rhs) const {
+			return AsObjectPtr()->operator=(std::forward<Arg>(rhs));
+		}
+
 		SHARED_OBJECT_DEFINE_OPERATOR(+=)
 		SHARED_OBJECT_DEFINE_OPERATOR(-=)
 		SHARED_OBJECT_DEFINE_OPERATOR(*=)
@@ -779,8 +812,8 @@ namespace Ubpa::UDRefl {
 		SHARED_OBJECT_DEFINE_UNARY_OPERATOR(*)
 
 		template<typename... Args>
-		SharedObject operator()(Args... args) const {
-			return AsObjectPtr()->operator()<Args...>(std::forward<Args>(args)...);
+		SharedObject operator()(Args&&... args) const {
+			return AsObjectPtr()->operator()<Args&&...>(std::forward<Args>(args)...);
 		}
 
 		template<typename T>
@@ -812,6 +845,7 @@ namespace Ubpa::UDRefl {
 
 #undef OBJECT_PTR_DECLARE_OPERATOR
 #undef OBJECT_PTR_DEFINE_CMP_OPERATOR
+#undef OBJECT_PTR_DEFINE_ASSIGN_OP_OPERATOR
 #undef OBJECT_PTR_DECLARE_CONTAINER
 #undef OBJECT_PTR_DECLARE_CONTAINER_VARS
 #undef SHARED_OBJECT_DECLARE_OPERATOR

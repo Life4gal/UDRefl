@@ -1,8 +1,6 @@
 # To-Do
 
-- [ ] `TypeIDRegistry` Type Computation
-  - [x] `AddConstLValueReference` 
-  - [ ] ...
+- [x] `TypeIDRegistry` Type Computation
 - [x] cast (reference) more
 - [ ] traits
   - [ ] simplify
@@ -12,5 +10,9 @@
 - [ ] improve test
 - [ ] introduction
 - [ ] doc
-- [ ] `Get{R|RW}MemberVars` 
+- [x] `Get{R|RW}OwnedVars` 
+- [x] improve method ptr
+- [x] perfect forwarding when invoking (auto copy)
+- [x] simplify assign operator
+- [ ] improve `A..Invoke` 
 

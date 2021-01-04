@@ -20,6 +20,11 @@
 
 Extremely **fast** C++17 dynamic reflection library
 
+## Documentaion [->](doc/)
+
+- [to-do](doc/todo.md) 
+- [change log](doc/change_log.md) 
+
 ## How to Use
 
 > the example code is [here](src/test/00_readme/main.cpp), other examples is [here](https://github.com/Ubpa/UDRefl#other-example) 
@@ -48,21 +53,11 @@ ReflMngr::Instance().AddMethod<&Vec::norm>("norm");
 ### Iterate over members
 
 ```c++
-ReflMngr::Instance().ForEachField(
-  TypeID_of<Vec>,
-  [](Type type, Field field) {
-    std::cout << ReflMngr::Instance().nregistry.Nameof(field.ID) << std::endl;
-	return true;
-  }
-);
+for (auto field : ReflMngr::Instance().GetFields(TypeID_of<Vec>))
+  std::cout << ReflMngr::Instance().nregistry.Nameof(field.ID) << std::endl;
 
-ReflMngr::Instance().ForEachMethod(
-  TypeID_of<Vec>,
-  [](Type type, Method method) {
-    std::cout << ReflMngr::Instance().nregistry.Nameof(method.ID) << std::endl;
-	return true;
-  }
-);
+for (auto method : ReflMngr::Instance().GetMethods(TypeID_of<Vec>))
+  std::cout << ReflMngr::Instance().nregistry.Nameof(method.ID) << std::endl;
 ```
 
 ### Constructing types
@@ -120,11 +115,11 @@ for (const auto& [type, field, var] : v->GetTypeFieldRVars()) {
 - classes with **single**-, **multiple**- and **virtual**-inheritance
 - constructors (arbitrary argument count) and destructors
 - methods (**virtual**, **abstract**, **overloaded**, arbitrary argument count) : you can pass arguments by a buffer (on stack or heap)
-- ability to invoke properties and methods of classes from any arbitrary class level
+- ability to invoke methods of classes from any arbitrary class level
 - no header pollution: the reflection information is created in the cpp file to minimize compile time when modifying the data
 - working with custom types without the need of having the declaration of the type available at compile time (useful for plugins)
 - possibility to add additional **attribute** to all reflection objects
-- reference
+- reference/pointer
 - standard container
 - **meta** function: `operator +`, `operator-`, etc
 - **no** macro usage
